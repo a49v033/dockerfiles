@@ -1,13 +1,37 @@
 package dbdata
 
 import (
+	"encoding/json"
 	"reflect"
+
+	"xorm.io/xorm"
 )
 
-const (
-	SettingBucket = "SettingBucket"
-	Installed     = "Installed"
-)
+type SettingInstall struct {
+	Installed bool `json:"installed"`
+}
+
+type SettingSmtp struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	From       string `json:"from"`
+	Encryption string `json:"encryption"`
+}
+
+type SettingAuditLog struct {
+	AuditInterval int    `json:"audit_interval"`
+	LifeDay       int    `json:"life_day"`
+	ClearTime     string `json:"clear_time"`
+}
+
+type SettingOther struct {
+	LinkAddr    string `json:"link_addr"`
+	Banner      string `json:"banner"`
+	Homeindex   string `json:"homeindex"`
+	AccountMail string `json:"account_mail"`
+}
 
 func StructName(data interface{}) string {
 	ref := reflect.ValueOf(data)
@@ -20,29 +44,56 @@ func StructName(data interface{}) string {
 	return name
 }
 
+func SettingSessAdd(sess *xorm.Session, data interface{}) error {
+	name := StructName(data)
+	v, _ := json.Marshal(data)
+	s := &Setting{Name: name, Data: v}
+	_, err := sess.InsertOne(s)
+	return err
+}
+
 func SettingSet(data interface{}) error {
-	key := StructName(data)
-	err := Set(SettingBucket, key, data)
+	name := StructName(data)
+	v, _ := json.Marshal(data)
+	s := &Setting{Data: v}
+	err := Update("name", name, s)
 	return err
 }
 
 func SettingGet(data interface{}) error {
-	key := StructName(data)
-	err := Get(SettingBucket, key, data)
+	name := StructName(data)
+	s := &Setting{Name: name}
+	err := One("name", name, s)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(s.Data, data)
 	return err
 }
 
-type SettingSmtp struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	From     string `json:"from"`
-	UseSSl   bool   `json:"use_ssl"`
+func SettingGetAuditLog() (SettingAuditLog, error) {
+	data := SettingAuditLog{}
+	err := SettingGet(&data)
+	if err == nil {
+		return data, err
+	}
+	if !CheckErrNotFound(err) {
+		return data, err
+	}
+	sess := xdb.NewSession()
+	defer sess.Close()
+	auditLog := SettingGetAuditLogDefault()
+	err = SettingSessAdd(sess, auditLog)
+	if err != nil {
+		return data, err
+	}
+	return auditLog, nil
 }
 
-type SettingOther struct {
-	LinkAddr    string `json:"link_addr"`
-	Banner      string `json:"banner"`
-	AccountMail string `json:"account_mail"`
+func SettingGetAuditLogDefault() SettingAuditLog {
+	auditLog := SettingAuditLog{
+		LifeDay:   0,
+		ClearTime: "05:00",
+	}
+	return auditLog
 }

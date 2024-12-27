@@ -5,6 +5,7 @@ import (
 
 	"github.com/bjdgyc/anylink/base"
 	"github.com/bjdgyc/anylink/sessdata"
+	"github.com/coreos/go-iptables/iptables"
 	"github.com/songgao/water"
 )
 
@@ -26,6 +27,28 @@ func checkTun() {
 	if err != nil {
 		base.Fatal("testTun err: ", err)
 	}
+	//开启服务器转发
+	if err := execCmd([]string{"sysctl -w net.ipv4.ip_forward=1"}); err != nil {
+		base.Error(err)
+	}
+	if base.Cfg.IptablesNat {
+		//添加NAT转发规则
+		ipt, err := iptables.New()
+		if err != nil {
+			base.Error(err)
+			return
+		}
+		natRule := []string{"-s", base.Cfg.Ipv4CIDR, "-o", base.Cfg.Ipv4Master, "-j", "MASQUERADE"}
+		forwardRule := []string{"-j", "ACCEPT"}
+		if natExists, _ := ipt.Exists("nat", "POSTROUTING", natRule...); !natExists {
+			ipt.Insert("nat", "POSTROUTING", 1, natRule...)
+		}
+		if forwardExists, _ := ipt.Exists("filter", "FORWARD", forwardRule...); !forwardExists {
+			ipt.Insert("filter", "FORWARD", 1, forwardRule...)
+		}
+		base.Info(ipt.List("nat", "POSTROUTING"))
+		base.Info(ipt.List("filter", "FORWARD"))
+	}
 }
 
 // 创建tun网卡
@@ -40,20 +63,20 @@ func LinkTun(cSess *sessdata.ConnSession) error {
 		return err
 	}
 	// log.Printf("Interface Name: %s\n", ifce.Name())
-	cSess.SetTunName(ifce.Name())
-	// cSess.TunName = ifce.Name()
+	cSess.SetIfName(ifce.Name())
 
 	cmdstr1 := fmt.Sprintf("ip link set dev %s up mtu %d multicast off", ifce.Name(), cSess.Mtu)
 	cmdstr2 := fmt.Sprintf("ip addr add dev %s local %s peer %s/32",
 		ifce.Name(), base.Cfg.Ipv4Gateway, cSess.IpAddr)
-	cmdstr3 := fmt.Sprintf("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", ifce.Name())
-	cmdStrs := []string{cmdstr1, cmdstr2, cmdstr3}
-	err = execCmd(cmdStrs)
+	err = execCmd([]string{cmdstr1, cmdstr2})
 	if err != nil {
 		base.Error(err)
 		_ = ifce.Close()
 		return err
 	}
+
+	cmdstr3 := fmt.Sprintf("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", ifce.Name())
+	execCmd([]string{cmdstr3})
 
 	go tunRead(ifce, cSess)
 	go tunWrite(ifce, cSess)
@@ -68,24 +91,24 @@ func tunWrite(ifce *water.Interface, cSess *sessdata.ConnSession) {
 	}()
 
 	var (
-		err     error
-		payload *sessdata.Payload
+		err error
+		pl  *sessdata.Payload
 	)
 
 	for {
 		select {
-		case payload = <-cSess.PayloadIn:
+		case pl = <-cSess.PayloadIn:
 		case <-cSess.CloseChan:
 			return
 		}
 
-		_, err = ifce.Write(payload.Data)
+		_, err = ifce.Write(pl.Data)
 		if err != nil {
 			base.Error("tun Write err", err)
 			return
 		}
 
-		putPayload(payload)
+		putPayloadInBefore(cSess, pl)
 	}
 }
 
@@ -101,12 +124,15 @@ func tunRead(ifce *water.Interface, cSess *sessdata.ConnSession) {
 
 	for {
 		// data := make([]byte, BufferSize)
-		data := getByteFull()
-		n, err = ifce.Read(data)
+		pl := getPayload()
+		n, err = ifce.Read(pl.Data)
 		if err != nil {
 			base.Error("tun Read err", n, err)
 			return
 		}
+
+		// 更新数据长度
+		pl.Data = (pl.Data)[:n]
 
 		// data = data[:n]
 		// ip_src := waterutil.IPv4Source(data)
@@ -116,10 +142,8 @@ func tunRead(ifce *water.Interface, cSess *sessdata.ConnSession) {
 		// packet := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
 		// fmt.Println("read:", packet)
 
-		if payloadOut(cSess, sessdata.LTypeIPData, 0x00, data[:n]) {
+		if payloadOut(cSess, pl) {
 			return
 		}
-
-		putByte(data)
 	}
 }

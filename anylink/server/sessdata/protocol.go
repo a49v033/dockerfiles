@@ -8,13 +8,13 @@ const (
 )
 
 type Payload struct {
-	PType byte  // payload types
 	LType LType // LinkType
+	PType byte  // payload types
 	Data  []byte
 }
 
 /*
-   var header = []byte{'S', 'T', 'F', 0x01, 0, 0, 0x00, 0}
+   var header = []byte{'S', 'T', 'F', 0x01, 0, 0, 0x07, 0}
    https://tools.ietf.org/html/draft-mavrogiannopoulos-openconnect-02#section-2.2
 
    +---------------------+---------------------------------------------+

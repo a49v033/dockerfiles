@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/bjdgyc/anylink/dbdata"
-	"github.com/bjdgyc/anylink/sessdata"
-
 	"github.com/bjdgyc/anylink/base"
+	"github.com/bjdgyc/anylink/dbdata"
 	"github.com/bjdgyc/anylink/pkg/utils"
+	"github.com/bjdgyc/anylink/sessdata"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
@@ -67,10 +66,12 @@ func SetSystem(w http.ResponseWriter, r *http.Request) {
 	hi, _ := host.Info()
 	l, _ := load.Avg()
 	data["sys"] = map[string]interface{}{
-		"goOs":      runtime.GOOS,
-		"goArch":    runtime.GOARCH,
-		"goVersion": runtime.Version(),
-		"goroutine": runtime.NumGoroutine(),
+		"goOs":        runtime.GOOS,
+		"goArch":      runtime.GOARCH,
+		"goVersion":   runtime.Version(),
+		"goroutine":   runtime.NumGoroutine(),
+		"appVersion":  "v" + base.APP_VER,
+		"appCommitId": base.CommitId,
 
 		"hostname": hi.Hostname,
 		"platform": fmt.Sprintf("%v %v %v", hi.Platform, hi.PlatformFamily, hi.PlatformVersion),

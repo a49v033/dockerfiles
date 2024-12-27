@@ -27,6 +27,15 @@
             prop="mac_addr"
             label="MAC地址">
         </el-table-column>
+        
+        <el-table-column
+            prop="unique_mac"
+            label="唯一MAC">
+            <template slot-scope="scope">
+                <el-tag v-if="scope.row.unique_mac" type="success">是</el-tag>
+            </template>
+        </el-table-column>
+
         <el-table-column
             prop="ip"
             label="IP地址"
@@ -95,7 +104,7 @@
 
             <el-popconfirm
                 class="m-left-10"
-                @onConfirm="handleOffline(scope.row)"
+                @confirm="handleOffline(scope.row)"
                 title="确定要下线用户吗？">
               <el-button
                   slot="reference"
@@ -128,7 +137,7 @@ export default {
 
     const chatTimer = setInterval(() => {
       this.getData();
-    }, 2000);
+    }, 10000);
 
     this.$once('hook:beforeDestroy', () => {
       clearInterval(chatTimer);

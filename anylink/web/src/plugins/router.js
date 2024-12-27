@@ -17,8 +17,10 @@ const routes = [
             {path: 'set/system', component: () => import('@/pages/set/System')},
             {path: 'set/soft', component: () => import('@/pages/set/Soft')},
             {path: 'set/other', component: () => import('@/pages/set/Other')},
+            {path: 'set/audit', component: () => import('@/pages/set/Audit')},
 
             {path: 'user/list', component: () => import('@/pages/user/List')},
+            {path: 'user/policy', component: () => import('@/pages/user/Policy')},
             {path: 'user/online', component: () => import('@/pages/user/Online')},
             {path: 'user/ip_map', component: () => import('@/pages/user/IpMap')},
 

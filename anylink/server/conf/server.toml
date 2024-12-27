@@ -1,20 +1,16 @@
-#服务配置信息
+#示例配置信息
 
 #其他配置文件,可以使用绝对路径
-#或者相对于server.toml的路径
+#或者相对于 anylink 二进制文件的路径
 
 #数据文件
-db_file = "./data.db"
+db_type = "sqlite3"
+db_source = "./conf/anylink.db"
 #证书文件
-cert_file = "./test_vpn_cert.pem"
-cert_key = "./test_vpn_key.pem"
-ui_path = "../ui"
-files_path = "../files"
-#日志目录,为空写入标准输出
-#log_path = "../log"
-log_path = ""
+cert_file = "./conf/vpn_cert.crt"
+cert_key = "./conf/vpn_cert.key"
+files_path = "./conf/files"
 log_level = "debug"
-pprof = false
 
 #系统名称
 issuer = "XX公司VPN"
@@ -22,47 +18,29 @@ issuer = "XX公司VPN"
 admin_user = "admin"
 #pass 123456
 admin_pass = "$2a$10$UQ7C.EoPifDeJh6d8.31TeSPQU7hM/NOM2nixmBucJpAuXDQNqNke"
-jwt_secret = "iLmspvOiz*%ovfcs*wersdf#heR8pNU4XxBm&mW$aPCjSRMbYH#&"
-
+# 留空表示不开启 otp, 开启otp后密码为  pass + 6位otp
+# 生成 ./anylink tool -o
+admin_otp = ""
+jwt_secret = "abcdef.0123456789.abcdef"
 
 #服务监听地址
 server_addr = ":443"
-#开启 DTLS, 默认关闭
-server_dtls = false
-server_dtls_addr = ":4433"
 #后台服务监听地址
 admin_addr = ":8800"
-#开启tcp proxy protocol协议
-proxy_protocol = false
 
-link_mode = "tun"
 
 #客户端分配的ip地址池
-ipv4_cidr = "192.168.10.0/24"
-ipv4_gateway = "192.168.10.1"
-ipv4_start = "192.168.10.100"
-ipv4_end = "192.168.10.200"
+ipv4_master = "eth0"
+ipv4_cidr = "192.168.90.0/24"
+ipv4_gateway = "192.168.90.1"
+ipv4_start = "192.168.90.100"
+ipv4_end = "192.168.90.200"
 
-#最大客户端数量
-max_client = 100
-#单个用户同时在线数量
-max_user_client = 3
-#IP租期(秒)
-ip_lease = 1209600
-
-#默认选择的组
-default_group = "one"
-
-#客户端失效检测时间(秒) dpd > keepalive
-cstp_keepalive = 20
-cstp_dpd = 30
-mobile_keepalive = 40
-mobile_dpd = 50
-#session过期时间，用于断线重连，0永不过期
-session_timeout = 3600
-auth_timeout = 0
+#是否自动添加nat
+iptables_nat = true
 
 
-
+#客户端显示详细错误信息(线上环境慎开启)
+display_error = false
 
 

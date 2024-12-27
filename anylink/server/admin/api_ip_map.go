@@ -2,10 +2,9 @@ package admin
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/bjdgyc/anylink/dbdata"
 )
@@ -23,7 +22,7 @@ func UserIpMapList(w http.ResponseWriter, r *http.Request) {
 	count := dbdata.CountAll(&dbdata.IpMap{})
 
 	var datas []dbdata.IpMap
-	err := dbdata.All(&datas, pageSize, page)
+	err := dbdata.Find(&datas, pageSize, page)
 	if err != nil {
 		RespError(w, RespInternalErr, err)
 		return
@@ -60,7 +59,7 @@ func UserIpMapDetail(w http.ResponseWriter, r *http.Request) {
 func UserIpMapSet(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		RespError(w, RespInternalErr, err)
 		return
@@ -75,18 +74,13 @@ func UserIpMapSet(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Println(v, len(v.Ip), len(v.MacAddr))
 
-	if len(v.IpAddr) < 4 || len(v.MacAddr) < 6 {
-		RespError(w, RespParamErr, "IP或MAC错误")
-		return
-	}
-
-	v.UpdatedAt = time.Now()
-	err = dbdata.Save(v)
-
+	err = dbdata.SetIpMap(v)
 	if err != nil {
 		RespError(w, RespInternalErr, err)
 		return
 	}
+
+	// sessdata.IpAllSet(v)
 
 	RespSucess(w, nil)
 }
@@ -101,11 +95,20 @@ func UserIpMapDel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := dbdata.IpMap{Id: id}
-	err := dbdata.Del(&data)
+	var data dbdata.IpMap
+	err := dbdata.One("Id", id, &data)
 	if err != nil {
 		RespError(w, RespInternalErr, err)
 		return
 	}
+
+	err = dbdata.Del(&data)
+	if err != nil {
+		RespError(w, RespInternalErr, err)
+		return
+	}
+
+	// sessdata.IpAllDel(&data)
+
 	RespSucess(w, nil)
 }
